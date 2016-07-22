@@ -21,7 +21,7 @@ Framework::Framework(void)
 
 	ZeroMemory(&mScreenViewport, sizeof(D3D11_VIEWPORT));
 
-	input = new Entrada();
+	
 
 	appHandle = this;
 
@@ -29,14 +29,17 @@ Framework::Framework(void)
 	//
 	//	Teste com modelos e shaders
 	//
+	
+	input = new Entrada();
+	mouse = new Mouse();
+	camera = new Camera(mouse);
 	shaderModelo = new Shader();
 	modelo = new Model();
-	camera = new Camera();
 
 	
 	XMMATRIX I = XMMatrixIdentity();
+	modelo->SetWorldMatrix(I);
 	XMStoreFloat4x4(&mWorld, I);
-
 	
 	XMStoreFloat4x4(&mProj, XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)JANELA_WIDTH / (float)JANELA_HEIGHT, 0.1f, 1000.0f));
 
@@ -69,6 +72,7 @@ Framework::~Framework(void)
 	SafeDelete(shaderModelo);
 	SafeDelete(modelo);
 	SafeDelete(camera);
+	SafeDelete(mouse);
 
 	UnregisterClass(nomeAplicacao, instanciaJanela);
 	instanciaJanela = NULL;
@@ -91,8 +95,11 @@ bool Framework::Iniciar() {
 	if (!CriarRasterizers())
 		return false;
 
+	Geometrias geoGen;
+	geoGen.Height(320.0f, 320.0f, 100, 100, *modelo);
+	modelo->Build(md3dDevice);
 	///modelo->OpenTXT("Box.txt", md3dDevice);
-	modelo->LoadCube(md3dDevice);
+	///modelo->LoadCube(md3dDevice);
 
 	if (!shaderModelo->Iniciar(L"color.hlsl", md3dDevice))
 		return false;
@@ -150,21 +157,8 @@ void Framework::Executar()
 void Framework::Update(float deltaTime)
 {
 
-
-	angulo += 0.25 * deltaTime;
-	/*XMMATRIX view = XMMatrixRotationY(angulo);
-	XMMATRIX vView = XMLoadFloat4x4(&mView);
-	XMMATRIX vv = view * vView;
-	XMStoreFloat4x4(&mView, vv);*/
-	float raio = 5.0f;
-	float x = sinf(angulo) * raio;
-	float y = sinf(angulo) * raio;
-	float z = cosf(angulo) * raio;
-	XMVECTOR pos = XMVectorSet(x, y, z, 1.0f);
-	XMVECTOR alvo = XMVectorZero();
-	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	XMMATRIX V = XMMatrixLookAtLH(pos, alvo, up);
-	XMStoreFloat4x4(&mView, V);
+	camera->Update(deltaTime);
+	///modelo->Update(deltaTime);
 }
 
 
@@ -178,22 +172,20 @@ void Framework::Render()
 
 
 	////MODELO 1
-	XMMATRIX world = XMLoadFloat4x4(&mWorld);
-	//world = XMMatrixTranspose(world);
-	XMMATRIX view = XMLoadFloat4x4(&mView);
+	XMMATRIX world = modelo->GetWorldMatrix();//XMLoadFloat4x4(&mWorld);
+	XMMATRIX view = camera->GetCameraView();
 	XMMATRIX proj = XMLoadFloat4x4(&mProj);
 	XMMATRIX WorldViewProj = world * view * proj;
 	XMFLOAT4X4 gWorldViewProj;
 	XMStoreFloat4x4(&gWorldViewProj, WorldViewProj);
 	
-	
 	cgWorldViewProj->worldViewProj = gWorldViewProj;
-
 
 	modelo->Render(md3dImmediateContext, solidRasterizer);
 	shaderModelo->Ativar(md3dImmediateContext, cgWorldViewProj);
 	shaderModelo->Render(md3dImmediateContext, modelo->nModelIndex);
 	////MODELO 1
+
 
 
 
@@ -220,6 +212,22 @@ LRESULT Framework::EventosEngine(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	}
 		break;
 
+
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+		OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		break;
+
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_MBUTTONUP:
+		OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		break;
+
+	case WM_MOUSEMOVE:
+		OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		break;
 
 	case WM_SIZE:
 	{
@@ -702,4 +710,49 @@ void Framework::CalcularFPS()
 		frameCnt = 0;
 		timeElapsed += 1.0f;
 	}
+}
+
+
+
+
+
+
+
+//
+//	Mouse functions
+//
+
+void Framework::OnMouseDown(WPARAM mouseButton, int x, int y) {
+	
+	mouse->lastMousePos.x = x;
+	mouse->lastMousePos.y = y;
+
+	SetCapture(janelaMain);
+}
+
+void Framework::OnMouseUp(WPARAM mouseButton, int x, int y) {
+	ReleaseCapture();
+}
+
+void Framework::OnMouseMove(WPARAM mouseButton, int x, int y) {
+	
+	if ((mouseButton & MK_LBUTTON) != 0) {
+		mouse->dx = XMConvertToRadians(0.25f*static_cast<float>(x - mouse->lastMousePos.x));
+		mouse->dy = XMConvertToRadians(0.25f*static_cast<float>(y - mouse->lastMousePos.y));
+	}
+	else if ((mouseButton & MK_RBUTTON) != 0)
+	{
+		// Make each pixel correspond to 0.005 unit in the scene.
+		mouse->dx = 0.005f*static_cast<float>(x - mouse->lastMousePos.x);
+		mouse->dy = 0.005f*static_cast<float>(y - mouse->lastMousePos.y);
+
+		// Update the camera radius based on input.
+		camera->raio += (mouse->dx - mouse->dy) * 2;
+
+		// Restrict the radius.
+		camera->raio = Clamp(camera->raio, 3.0f, 150.0f);
+	}
+
+	mouse->lastMousePos.x = x;
+	mouse->lastMousePos.y = y;
 }

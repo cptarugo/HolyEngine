@@ -7,22 +7,27 @@
 #include <d3dx11.h>
 #include <xnamath.h>
 #include "Definicoes.h";
+#include "Mouse.h"
 
 class Camera
 {
 public:
-	Camera();
+	Camera(Mouse *_mouse);
 	~Camera();
 
-	void Update();
+	void Update(float deltaTime);
 	void ChangePosition(float x, float y, float z);
 
 	XMMATRIX GetCameraView();
 
+	float raio;
 private:
-	float posX, posY, posZ;
+	float posX, posY, posZ, angulo;
+	float mPhi, mTheta;
+
 	XMMATRIX cameraViewMatrix;
 
+	Mouse *mouse;
 };
 
 #endif

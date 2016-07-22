@@ -24,5 +24,7 @@
 #include "Entrada.h"
 #include "Timer.h"
 #include "Camera.h"
+#include "Mouse.h"
+#include "Geometrias.h"
 
 #endif

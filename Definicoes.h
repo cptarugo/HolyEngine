@@ -15,6 +15,8 @@
 #define ReleaseCOM(x){ if(x){ x->Release(); x = 0; } }
 #define SafeDelete(x){ delete x; x = 0; }
 
+
+
 static float JANELA_WIDTH = 800.0f;
 static float JANELA_HEIGHT = 600.0f;
 
@@ -23,5 +25,16 @@ const float CLIP_PERTO = 0.01f; //Near clipping plane
 
 const bool USE_FULLSCREEN = true;
 const bool VSYNC_ENABLED = false;
+
+
+
+
+
+template<typename T>
+static T Clamp(const T& x, const T& low, const T& high)
+{
+	return x < low ? low : (x > high ? high : x);
+}
+
 
 #endif

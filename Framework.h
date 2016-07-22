@@ -33,6 +33,7 @@ private:
 	Shader *shaderModelo;
 	Model *modelo;
 	Camera *camera;
+	Mouse *mouse;
 	XMFLOAT4X4 mView, mProj, mWorld;
 	constantBufferShader *cgWorldViewProj;
 
@@ -75,6 +76,10 @@ private:
 	bool IniciarDirectX();
 
 	bool OnResize();
+
+	void OnMouseDown(WPARAM mouseButton, int x, int y);
+	void OnMouseUp(WPARAM mouseButton, int x, int y);
+	void OnMouseMove(WPARAM mouseButton, int x, int y);
 
 	bool CriarRasterizers();
 

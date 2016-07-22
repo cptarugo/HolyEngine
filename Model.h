@@ -3,6 +3,7 @@
 
 #pragma once
 #include <d3dx11.h>
+#include <xnamath.h>
 #include "Definicoes.h"
 #include <iostream>
 #include <fstream>
@@ -23,8 +24,11 @@ public:
 
 	UINT nModelVert;
 	UINT nModelIndex;
+	std::vector<Vertice> vertices;
+	std::vector<UINT> indices;
 
 	void OpenTXT(char *file_name, ID3D11Device *device);
+	void Build(ID3D11Device *device);
 	void LoadCube(ID3D11Device *device);
 
 	inline ID3D11Buffer *GetVerticesBuffer() {	return modelVertices; }
@@ -32,12 +36,17 @@ public:
 
 	virtual void Render(ID3D11DeviceContext *conDevice, ID3D11RasterizerState *rasterizerState); //Sobrescrever esse metodo para cada modelo diferente
 
+	void Update(float dt);
+
+	void SetWorldMatrix(const XMMATRIX& newWorld);
+	XMMATRIX GetWorldMatrix();
+
 private:
 
 	ID3D11Buffer *modelVertices;
 	ID3D11Buffer *modelIndices;
-	
 
+	XMMATRIX worldMatrix;
 };
 
 #endif

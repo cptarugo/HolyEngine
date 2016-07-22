@@ -9,6 +9,8 @@ Model::Model()
 
 	modelVertices = NULL;
 	modelIndices = NULL;
+
+	worldMatrix = XMMatrixIdentity();
 }
 
 
@@ -36,7 +38,7 @@ void Model::OpenTXT(char * file_name, ID3D11Device* device)
 	fin >> ignore;
 
 
-	std::vector<Vertice> vertices(nModelVert);
+	vertices.resize(nModelVert);
 	for (int i = 0; i < nModelVert; ++i) {
 		fin >> vertices[i].Pos.x >> vertices[i].Pos.y >> vertices[i].Pos.z;
 		fin >> vertices[i].Cor.x >> vertices[i].Cor.y >> vertices[i].Cor.z;
@@ -46,7 +48,7 @@ void Model::OpenTXT(char * file_name, ID3D11Device* device)
 
 	fin >> ignore >> ignore;
 
-	std::vector<UINT> indices(nModelIndex);
+	indices.resize(nModelIndex);
 	UINT tNumber = nModelIndex;
 	for (int i = 0; i < tNumber / 3; ++i) {
 		fin >> indices[i * 3 + 0] >> indices[i * 3 + 1] >> indices[i * 3 + 2];
@@ -55,6 +57,17 @@ void Model::OpenTXT(char * file_name, ID3D11Device* device)
 	fin.close();
 
 
+
+
+	Build(device);
+}
+
+
+
+
+
+void Model::Build(ID3D11Device * device)
+{
 	//
 	//	Criando a descricao para o buffer dos vertices
 	//
@@ -227,6 +240,22 @@ void Model::Render(ID3D11DeviceContext *conDevice, ID3D11RasterizerState *raster
 	UINT offset = 0;
 	conDevice->IASetVertexBuffers(0, 1, &modelVertices, &strides, &offset);
 	conDevice->IASetIndexBuffer(modelIndices, DXGI_FORMAT_R32_UINT, 0);
+}
+
+void Model::Update(float dt)
+{
+	XMMATRIX rotMatrix = XMMatrixRotationRollPitchYaw(dt, dt, dt);
+	worldMatrix = ((XMMATRIX)rotMatrix) * ((XMMATRIX)worldMatrix);
+}
+
+void Model::SetWorldMatrix(const XMMATRIX& newWorld)
+{
+	worldMatrix = newWorld;
+}
+
+XMMATRIX Model::GetWorldMatrix()
+{
+	return worldMatrix;
 }
 
 
