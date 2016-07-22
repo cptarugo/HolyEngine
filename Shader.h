@@ -11,6 +11,12 @@ struct constantBufferShader {
 	XMFLOAT4X4 worldViewProj;
 };
 
+struct cbPerObject {
+	XMMATRIX mWorld;
+	XMMATRIX mView;
+	XMMATRIX mProj;
+};
+
 class Shader
 {
 public:

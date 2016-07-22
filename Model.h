@@ -25,6 +25,7 @@ public:
 	UINT nModelIndex;
 
 	void OpenTXT(char *file_name, ID3D11Device *device);
+	void LoadCube(ID3D11Device *device);
 
 	inline ID3D11Buffer *GetVerticesBuffer() {	return modelVertices; }
 	inline ID3D11Buffer *GetIndicesBuffer() { return modelIndices;  }
