@@ -33,17 +33,32 @@ bool Shader::Iniciar(WCHAR *shader_hlsl_name, ID3D11Device *device)
 
 void Shader::Ativar(ID3D11DeviceContext *conDevice, constantBufferShader *gWorldViewProj)
 {
-	conDevice->UpdateSubresource(cbWorldViewProj, 0, 0, gWorldViewProj, 0, 0);
+	///conDevice->UpdateSubresource(cbWorldViewProj, 0, 0, gWorldViewProj, 0, 0);
+	D3D11_MAPPED_SUBRESOURCE ms;
+	ZeroMemory(&ms, sizeof(ms));
+
+
+	//Transposing a matriz
+	XMMATRIX worldVProjTransposed = XMLoadFloat4x4(&gWorldViewProj->worldViewProj);
+	XMStoreFloat4x4(&gWorldViewProj->worldViewProj, XMMatrixTranspose(worldVProjTransposed));
+
+	conDevice->Map(cbWorldViewProj, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+	memcpy(ms.pData, &gWorldViewProj->worldViewProj, sizeof(gWorldViewProj->worldViewProj));
+	conDevice->Unmap(cbWorldViewProj, 0);
+
 	conDevice->VSSetConstantBuffers(0, 1, &cbWorldViewProj);
+
+
 }
 
 void Shader::Render(ID3D11DeviceContext * conDevice, UINT indicesCount)
 {
 	conDevice->IASetInputLayout(inputLayout);
-	conDevice->VSSetShader(vShader, NULL, 0);
-	conDevice->PSSetShader(pShader, NULL, 0);
+	conDevice->VSSetShader(vShader, 0, 0);
+	conDevice->PSSetShader(pShader, 0, 0);
 
 	conDevice->DrawIndexed(indicesCount, 0, 0);
+	///conDevice->Draw(3, 0);
 }
 
 
@@ -109,25 +124,14 @@ bool Shader::StartShader(WCHAR *shader_hlsl_name, ID3D11Device * device)
 	//
 	//	Criando o Input Layout
 	//
-	D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[2];
-	inputLayoutDesc[0].SemanticName = "POSITION";
-	inputLayoutDesc[0].SemanticIndex = 0;
-	inputLayoutDesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	inputLayoutDesc[0].InputSlot = 0;
-	inputLayoutDesc[0].AlignedByteOffset = 0;
-	inputLayoutDesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	inputLayoutDesc[0].InstanceDataStepRate = 0;
-
-	inputLayoutDesc[1].SemanticName = "COLOR";
-	inputLayoutDesc[1].SemanticIndex = 0;
-	inputLayoutDesc[1].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	inputLayoutDesc[1].InputSlot = 0;
-	inputLayoutDesc[1].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT; //ou 12
-	inputLayoutDesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-	inputLayoutDesc[1].InstanceDataStepRate = 0;
+	D3D11_INPUT_ELEMENT_DESC vertexDesc[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
 
 
-	hr = device->CreateInputLayout(inputLayoutDesc, 2, vertexCompiled->GetBufferPointer(), vertexCompiled->GetBufferSize(), &inputLayout);
+	hr = device->CreateInputLayout(vertexDesc, 2, vertexCompiled->GetBufferPointer(), vertexCompiled->GetBufferSize(), &inputLayout);
 	if (FAILED(hr)) {
 		MessageBox(0, L"CreateInputLayout falhou.", 0, 0);
 		return false;
@@ -145,12 +149,18 @@ bool Shader::CriarConstantBuffer(ID3D11Device * device)
 	ZeroMemory(&cbBD, sizeof(cbBD));
 	cbBD.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	cbBD.ByteWidth = sizeof(constantBufferShader);
-	cbBD.Usage = D3D11_USAGE_DEFAULT; //Acho q seria dynamic
-	cbBD.CPUAccessFlags = 0;
+	cbBD.Usage = D3D11_USAGE_DYNAMIC; //Acho q seria dynamic
+	cbBD.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	cbBD.MiscFlags = 0;
 	cbBD.StructureByteStride = 0;
 	
-	HRESULT hr = device->CreateBuffer(&cbBD, NULL, &cbWorldViewProj);
+	D3D11_SUBRESOURCE_DATA constantBufferInit;
+	XMFLOAT4X4 pos;
+	XMStoreFloat4x4(&pos, XMMatrixIdentity());
+	ZeroMemory(&constantBufferInit, sizeof(constantBufferInit));
+	constantBufferInit.pSysMem = &pos;
+
+	HRESULT hr = device->CreateBuffer(&cbBD, &constantBufferInit, &cbWorldViewProj);
 	if (FAILED(hr)) {
 		MessageBox(0, L"CreateBuffer (Constant) falhou.", 0, 0);
 		return false;

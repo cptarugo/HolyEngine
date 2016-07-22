@@ -23,5 +23,6 @@
 #include "Shader.h"
 #include "Entrada.h"
 #include "Timer.h"
+#include "Camera.h"
 
 #endif

@@ -3,9 +3,9 @@
 #include <assert.h>
 
 
-Framework::Framework(void) 
-:
-	mEnable4xMsaa(false),
+Framework::Framework(void)
+	:
+	mEnable4xMsaa(true),
 	mAppPaused(false),
 	mResizing(false),
 	m4xMsaaQualidade(0),
@@ -15,7 +15,8 @@ Framework::Framework(void)
 	mSwapChain(0),
 	mDepthStencilBuffer(0),
 	mRenderTargetView(0),
-	mDepthStencilView(0)
+	mDepthStencilView(0),
+	angulo(0.0f)
 {
 
 	ZeroMemory(&mScreenViewport, sizeof(D3D11_VIEWPORT));
@@ -30,18 +31,16 @@ Framework::Framework(void)
 	//
 	shaderModelo = new Shader();
 	modelo = new Model();
+	camera = new Camera();
 
+	
 	XMMATRIX I = XMMatrixIdentity();
-	XMStoreFloat4x4(&mProj, I);
-
-	XMVECTOR pos = XMVectorSet(10.0f, 10.0f, 10.0f, 1.0f); //pos camera
-	XMVECTOR target = XMVectorZero();
-	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	XMMATRIX V = XMMatrixLookAtLH(pos, target, up);
-	XMStoreFloat4x4(&mView, V);
-
-	XMMATRIX T = XMMatrixTranslation(0.0f, 0.0f, -5.0f);
 	XMStoreFloat4x4(&mWorld, I);
+
+	
+	XMStoreFloat4x4(&mProj, XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)JANELA_WIDTH / (float)JANELA_HEIGHT, 0.1f, 1000.0f));
+
+	cgWorldViewProj = new constantBufferShader();
 }
 
 
@@ -54,6 +53,7 @@ Framework::~Framework(void)
 
 	ReleaseCOM(mSwapChain);
 	ReleaseCOM(mDepthStencilBuffer);
+	ReleaseCOM(pDepthStencilState);
 	ReleaseCOM(mRenderTargetView);
 	ReleaseCOM(mDepthStencilView);
 
@@ -68,6 +68,7 @@ Framework::~Framework(void)
 
 	SafeDelete(shaderModelo);
 	SafeDelete(modelo);
+	SafeDelete(camera);
 
 	UnregisterClass(nomeAplicacao, instanciaJanela);
 	instanciaJanela = NULL;
@@ -90,7 +91,8 @@ bool Framework::Iniciar() {
 	if (!CriarRasterizers())
 		return false;
 
-	modelo->OpenTXT("Triangulo.txt", md3dDevice);
+	///modelo->OpenTXT("Box.txt", md3dDevice);
+	modelo->LoadCube(md3dDevice);
 
 	if (!shaderModelo->Iniciar(L"color.hlsl", md3dDevice))
 		return false;
@@ -128,9 +130,13 @@ void Framework::Executar()
 			gameTimer.Tick();
 
 			if (!mAppPaused) {
+				CalcularFPS();
 				Update(gameTimer.DeltaTime());
 				Render();
 			}
+			else 
+				Sleep(100);
+			
 			
 		}
 	}
@@ -143,7 +149,22 @@ void Framework::Executar()
 //
 void Framework::Update(float deltaTime)
 {
-	
+
+
+	angulo += 0.25 * deltaTime;
+	/*XMMATRIX view = XMMatrixRotationY(angulo);
+	XMMATRIX vView = XMLoadFloat4x4(&mView);
+	XMMATRIX vv = view * vView;
+	XMStoreFloat4x4(&mView, vv);*/
+	float raio = 5.0f;
+	float x = sinf(angulo) * raio;
+	float y = sinf(angulo) * raio;
+	float z = cosf(angulo) * raio;
+	XMVECTOR pos = XMVectorSet(x, y, z, 1.0f);
+	XMVECTOR alvo = XMVectorZero();
+	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMMATRIX V = XMMatrixLookAtLH(pos, alvo, up);
+	XMStoreFloat4x4(&mView, V);
 }
 
 
@@ -156,21 +177,24 @@ void Framework::Render()
 	ComecoCena();
 
 
-	////
+	////MODELO 1
 	XMMATRIX world = XMLoadFloat4x4(&mWorld);
+	//world = XMMatrixTranspose(world);
 	XMMATRIX view = XMLoadFloat4x4(&mView);
 	XMMATRIX proj = XMLoadFloat4x4(&mProj);
 	XMMATRIX WorldViewProj = world * view * proj;
 	XMFLOAT4X4 gWorldViewProj;
 	XMStoreFloat4x4(&gWorldViewProj, WorldViewProj);
+	
+	
+	cgWorldViewProj->worldViewProj = gWorldViewProj;
 
-	constantBufferShader cbWorldViewProj;
-	cbWorldViewProj.worldViewProj = gWorldViewProj;
 
 	modelo->Render(md3dImmediateContext, solidRasterizer);
-	shaderModelo->Ativar(md3dImmediateContext, &cbWorldViewProj);
+	shaderModelo->Ativar(md3dImmediateContext, cgWorldViewProj);
 	shaderModelo->Render(md3dImmediateContext, modelo->nModelIndex);
-	////
+	////MODELO 1
+
 
 
 	TrocarBuffer();
@@ -316,6 +340,8 @@ bool Framework::IniciarDirectX() {
 	ReleaseCOM(dxgiAdapter);
 	ReleaseCOM(dxgiFactory);
 
+
+
 	if (!OnResize())
 		return false;
 
@@ -327,6 +353,11 @@ bool Framework::IniciarDirectX() {
 
 bool Framework::OnResize()
 {
+
+	XMMATRIX pProj = XMMatrixPerspectiveFovLH(XM_PIDIV4, JANELA_WIDTH / JANELA_HEIGHT, CLIP_PERTO, CLIP_LONGE);
+	XMStoreFloat4x4(&mProj, pProj);
+
+
 	assert(md3dImmediateContext);
 	assert(md3dDevice);
 	assert(mSwapChain);
@@ -360,6 +391,50 @@ bool Framework::OnResize()
 		return false;
 	}
 	ReleaseCOM(backBuffer);
+
+
+
+
+
+
+	//Criando o depth stencil state
+	D3D11_DEPTH_STENCIL_DESC dsDesc;
+	ZeroMemory(&dsDesc, sizeof(dsDesc));
+	// Depth test parameters
+	dsDesc.DepthEnable = true;
+	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+
+	dsDesc.StencilEnable = true;
+	dsDesc.StencilReadMask = 0xFF;
+	dsDesc.StencilWriteMask = 0xFF;
+
+	// Stencil operations if pixel is front-facing.
+	dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Stencil operations if pixel is back-facing.
+	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	hr = md3dDevice->CreateDepthStencilState(&dsDesc, &pDepthStencilState);
+	if (FAILED(hr)) {
+		MessageBox(0, L"PORASPRASR", 0, 0);
+		return false;
+	}
+	//--------------------
+
+	///md3dImmediateContext->OMSetDepthStencilState(pDepthStencilState, 1);
+
+
+
+
+
 
 	// Create the depth/stencil buffer and view.
 
@@ -395,12 +470,17 @@ bool Framework::OnResize()
 		return false;
 	}
 	
-	hr = md3dDevice->CreateDepthStencilView(mDepthStencilBuffer, 0, &mDepthStencilView);
+	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
+	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+	hr = md3dDevice->CreateDepthStencilView(mDepthStencilBuffer, /*&depthStencilViewDesc*/0, &mDepthStencilView);
 	if (FAILED(hr)) {
 		MessageBox(0, L"CreateDepthStencilView erro.", 0, 0);
 		return false;
 	}
-
 
 	// Bind the render target view and depth/stencil view to the pipeline.
 
@@ -478,10 +558,11 @@ void Framework::ComecoCena() {
 
 	float cor[4];
 	cor[0] = 0.0f;
-	cor[1] = 1.0f;
-	cor[2] = 1.0f;
+	cor[1] = 0.2f;
+	cor[2] = 0.4f;
 	cor[3] = 1.0f;
 
+	md3dImmediateContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/, 1.0f, 0);
 	md3dImmediateContext->ClearRenderTargetView(mRenderTargetView, cor);
 }
 
@@ -529,7 +610,13 @@ bool Framework::CriarJanela(LPCWSTR titulo, int x, int y, int width, int height)
 
 	int nStyle = WS_OVERLAPPEDWINDOW | WS_SYSMENU | WS_VISIBLE | WS_CAPTION | WS_MINIMIZEBOX;
 
-	janelaMain = CreateWindowEx(WS_EX_APPWINDOW, nomeAplicacao, nomeAplicacao, nStyle, x, y, width, height, 0, 0, instanciaJanela, 0);
+
+	RECT R = { 0, 0, JANELA_WIDTH, JANELA_HEIGHT };
+	AdjustWindowRect(&R, WS_OVERLAPPEDWINDOW, false);
+	int widthT = R.right - R.left;
+	int heightT = R.bottom - R.top;
+
+	janelaMain = CreateWindowEx(WS_EX_APPWINDOW, nomeAplicacao, nomeAplicacao, nStyle, x, y, widthT, heightT, 0, 0, instanciaJanela, 0);
 
 	if (!janelaMain) {
 		MessageBox(0, L"CreatwWindowEx falhou.", L"Erro", 0);
@@ -583,4 +670,36 @@ static LRESULT CALLBACK MainWindowProc(HWND hwnd, UINT message, WPARAM wParam, L
 	};
 
 	return 0;
+}
+
+
+
+void Framework::CalcularFPS()
+{
+	// Code computes the average frames per second, and also the 
+	// average time it takes to render one frame.  These stats 
+	// are appended to the window caption bar.
+
+	static int frameCnt = 0;
+	static float timeElapsed = 0.0f;
+
+	frameCnt++;
+
+	// Compute averages over one second period.
+	if ((gameTimer.TotalTime() - timeElapsed) >= 1.0f)
+	{
+		float fps = (float)frameCnt; // fps = frameCnt / 1
+		float mspf = 1000.0f / fps;
+
+		std::wostringstream outs;
+		outs.precision(6);
+		outs << nomeAplicacao << L"    "
+			<< L"FPS: " << fps << L"    "
+			<< L"Frame Time: " << mspf << L" (ms)";
+		SetWindowText(janelaMain, outs.str().c_str());
+
+		// Reset for next average.
+		frameCnt = 0;
+		timeElapsed += 1.0f;
+	}
 }

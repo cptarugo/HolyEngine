@@ -32,7 +32,9 @@ private:
 	//
 	Shader *shaderModelo;
 	Model *modelo;
+	Camera *camera;
 	XMFLOAT4X4 mView, mProj, mWorld;
+	constantBufferShader *cgWorldViewProj;
 
 	//
 	//	Fundamentais para DirectX
@@ -43,8 +45,12 @@ private:
 	ID3D11Texture2D* mDepthStencilBuffer;
 	ID3D11RenderTargetView* mRenderTargetView;
 	ID3D11DepthStencilView* mDepthStencilView;
+	ID3D11DepthStencilState* pDepthStencilState;
 	D3D11_VIEWPORT mScreenViewport;
 	Timer gameTimer;
+
+	float angulo;
+
 
 	//
 	//	Rasterizers
@@ -75,6 +81,8 @@ private:
 
 	void ComecoCena();
 	void TrocarBuffer();
+
+	void CalcularFPS();
 };
 
 

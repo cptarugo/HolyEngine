@@ -7,8 +7,8 @@ Model::Model()
 	nModelVert = 0;
 	nModelIndex = 0;
 
-	//modelVertices = NULL;
-	//modelIndices = NULL;
+	modelVertices = NULL;
+	modelIndices = NULL;
 }
 
 
@@ -39,7 +39,8 @@ void Model::OpenTXT(char * file_name, ID3D11Device* device)
 	std::vector<Vertice> vertices(nModelVert);
 	for (int i = 0; i < nModelVert; ++i) {
 		fin >> vertices[i].Pos.x >> vertices[i].Pos.y >> vertices[i].Pos.z;
-		vertices[i].Cor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+		fin >> vertices[i].Cor.x >> vertices[i].Cor.y >> vertices[i].Cor.z;
+		vertices[i].Cor.w = 1.0f;
 	}
 
 
@@ -108,16 +109,124 @@ void Model::OpenTXT(char * file_name, ID3D11Device* device)
 }
 
 
+
+
+void Model::LoadCube(ID3D11Device * device)
+{
+	Vertice vertices[] =
+	{
+		//FRONT
+		{ XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, //0
+		{ XMFLOAT3(-1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, //1
+		{ XMFLOAT3(1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, //2
+		{ XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, //3
+
+																	 //BACK
+		{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }, //4
+		{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, //5
+		{ XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT4(0.4f, 0.2f, 0.0f, 1.0f) }, //6
+		{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT4(0.8f, 1.0f, 0.25f, 1.0f) }, //7
+
+																	  //TOP
+		{ XMFLOAT3(-1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, //1
+		{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, //5
+		{ XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT4(0.4f, 0.2f, 0.0f, 1.0f) }, //6
+		{ XMFLOAT3(1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, //2
+
+																	 //BOTTOM
+		{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }, //4
+		{ XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, //0
+		{ XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, //3
+		{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT4(0.8f, 1.0f, 0.25f, 1.0f) }, //7
+
+																	  //RIGHT
+		{ XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, //3
+		{ XMFLOAT3(1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, //2
+		{ XMFLOAT3(1.0f,  1.0f, -1.0f), XMFLOAT4(0.4f, 0.2f, 0.0f, 1.0f) }, //6
+		{ XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT4(0.8f, 1.0f, 0.25f, 1.0f) }, //7
+	
+																	  //LEFT
+		{ XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }, //4
+		{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, //5
+		{ XMFLOAT3(-1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, //1
+		{ XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, //0
+	};
+	nModelVert = 24;
+
+	UINT indices[] =
+	{
+		//FRONT
+		0, 2, 1,
+		0, 3, 2,
+
+		//BACK
+		7, 5, 6,
+		7, 4, 5,
+
+		//TOP
+		8, 10, 9,
+		8, 11, 10,
+
+		//BOTTOM
+		12, 14, 13,
+		12, 15, 14,
+
+		//RIGHT
+		16, 18, 17,
+		16, 19, 18,
+
+		//LEFT
+		20, 22, 21,
+		20, 23, 22,
+	};
+	nModelIndex = 36;
+
+	//VERTEX BUFFER
+	D3D11_BUFFER_DESC vertexDesc;
+	ZeroMemory(&vertexDesc, sizeof(D3D11_BUFFER_DESC));
+	vertexDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertexDesc.ByteWidth = sizeof(Vertice) * nModelVert;
+	vertexDesc.CPUAccessFlags = 0;
+	vertexDesc.MiscFlags = 0;
+	vertexDesc.StructureByteStride = 0;
+	vertexDesc.Usage = D3D11_USAGE_DEFAULT;
+
+	D3D11_SUBRESOURCE_DATA resourceData;
+	ZeroMemory(&resourceData, sizeof(D3D11_SUBRESOURCE_DATA));
+	resourceData.pSysMem = vertices;
+
+	HRESULT hr = device->CreateBuffer(&vertexDesc, &resourceData, &modelVertices);
+	if (FAILED(hr))
+		return;
+
+	//INDEX BUFFER
+	D3D11_BUFFER_DESC indexDesc;
+	ZeroMemory(&indexDesc, sizeof(D3D11_BUFFER_DESC));
+	indexDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexDesc.ByteWidth = sizeof(UINT) * nModelIndex;
+	indexDesc.CPUAccessFlags = 0;
+	indexDesc.MiscFlags = 0;
+	indexDesc.StructureByteStride = 0;
+	indexDesc.Usage = D3D11_USAGE_DEFAULT;
+	resourceData.pSysMem = indices;
+
+	hr = device->CreateBuffer(&indexDesc, &resourceData, &modelIndices);
+	if (FAILED(hr))
+		return;
+}
+
+
+
 void Model::Render(ID3D11DeviceContext *conDevice, ID3D11RasterizerState *rasterizerState)
 {
+	conDevice->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	conDevice->RSSetState(rasterizerState);
+
+
 	UINT strides = sizeof(Vertice);
 	UINT offset = 0;
-
 	conDevice->IASetVertexBuffers(0, 1, &modelVertices, &strides, &offset);
 	conDevice->IASetIndexBuffer(modelIndices, DXGI_FORMAT_R32_UINT, 0);
-	conDevice->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	conDevice->RSSetState(rasterizerState);
 }
 
 
