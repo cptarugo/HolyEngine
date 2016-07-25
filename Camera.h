@@ -17,13 +17,19 @@ public:
 
 	void Update(float deltaTime);
 	void ChangePosition(float x, float y, float z);
+	void IncPosition(float x, float y, float z);
+	void MoverFrente(bool keyDown);
+	void RotacionarEsq();
 
 	XMMATRIX GetCameraView();
 
 	float raio;
-private:
-	float posX, posY, posZ, angulo;
 	float mPhi, mTheta;
+private:
+	float posX, posY, posZ, angulo, forwardVelocity;
+	float rotX, rotY, rotZ, rotVelocity;
+	
+	float frameRate;
 
 	XMMATRIX cameraViewMatrix;
 

@@ -2,7 +2,6 @@
 #include "Definicoes.h"
 #include <assert.h>
 
-
 Framework::Framework(void)
 	:
 	mEnable4xMsaa(true),
@@ -35,11 +34,14 @@ Framework::Framework(void)
 	camera = new Camera(mouse);
 	shaderModelo = new Shader();
 	modelo = new Model();
+	modelo2 = new Model();
 
 	
 	XMMATRIX I = XMMatrixIdentity();
 	modelo->SetWorldMatrix(I);
 	XMStoreFloat4x4(&mWorld, I);
+
+	modelo2->SetWorldMatrix(XMMatrixTranslation(0.0f, 2.0f, 0.0f) * XMMatrixScaling(10.0f, 10.0f, 10.0f));
 	
 	XMStoreFloat4x4(&mProj, XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)JANELA_WIDTH / (float)JANELA_HEIGHT, 0.1f, 1000.0f));
 
@@ -99,7 +101,9 @@ bool Framework::Iniciar() {
 	geoGen.Height(320.0f, 320.0f, 100, 100, *modelo);
 	modelo->Build(md3dDevice);
 	///modelo->OpenTXT("Box.txt", md3dDevice);
-	///modelo->LoadCube(md3dDevice);
+	///modelo2->LoadCube(md3dDevice);
+	geoGen.Geosfera(0.5f, 2, *modelo2);
+	modelo2->Build(md3dDevice);
 
 	if (!shaderModelo->Iniciar(L"color.hlsl", md3dDevice))
 		return false;
@@ -158,7 +162,7 @@ void Framework::Update(float deltaTime)
 {
 
 	camera->Update(deltaTime);
-	///modelo->Update(deltaTime);
+	modelo2->Update(deltaTime);
 }
 
 
@@ -186,7 +190,18 @@ void Framework::Render()
 	shaderModelo->Render(md3dImmediateContext, modelo->nModelIndex);
 	////MODELO 1
 
+	////MODELO 1
+	world = modelo2->GetWorldMatrix();//XMLoadFloat4x4(&mWorld);
+	view = camera->GetCameraView();
+	WorldViewProj = world * view * proj;
+	XMStoreFloat4x4(&gWorldViewProj, WorldViewProj);
 
+	cgWorldViewProj->worldViewProj = gWorldViewProj;
+
+	modelo2->Render(md3dImmediateContext, wireframeRasterizer);
+	shaderModelo->Ativar(md3dImmediateContext, cgWorldViewProj);
+	shaderModelo->Render(md3dImmediateContext, modelo2->nModelIndex);
+	////MODELO 1
 
 
 	TrocarBuffer();
@@ -717,7 +732,6 @@ void Framework::CalcularFPS()
 
 
 
-
 //
 //	Mouse functions
 //
@@ -736,21 +750,43 @@ void Framework::OnMouseUp(WPARAM mouseButton, int x, int y) {
 
 void Framework::OnMouseMove(WPARAM mouseButton, int x, int y) {
 	
+	//
+	//	Camera Rotate
+	//
 	if ((mouseButton & MK_LBUTTON) != 0) {
 		mouse->dx = XMConvertToRadians(0.25f*static_cast<float>(x - mouse->lastMousePos.x));
 		mouse->dy = XMConvertToRadians(0.25f*static_cast<float>(y - mouse->lastMousePos.y));
+
+		camera->mTheta += mouse->dx;
+		camera->mPhi += mouse->dy;
+
+		camera->mPhi = Clamp(camera->mPhi, 0.1f, XM_PI - 0.1f);
 	}
+
+	//
+	//	Camera Zoom
+	//
 	else if ((mouseButton & MK_RBUTTON) != 0)
 	{
 		// Make each pixel correspond to 0.005 unit in the scene.
-		mouse->dx = 0.005f*static_cast<float>(x - mouse->lastMousePos.x);
-		mouse->dy = 0.005f*static_cast<float>(y - mouse->lastMousePos.y);
+		mouse->dx = 0.05f*static_cast<float>(x - mouse->lastMousePos.x);
+		mouse->dy = 0.05f*static_cast<float>(y - mouse->lastMousePos.y);
 
 		// Update the camera radius based on input.
 		camera->raio += (mouse->dx - mouse->dy) * 2;
 
 		// Restrict the radius.
 		camera->raio = Clamp(camera->raio, 3.0f, 150.0f);
+	}
+
+	//
+	//	Camera Pan
+	//
+	else if ((mouseButton & MK_MBUTTON) != 0) {	
+		mouse->dx = 0.75f*static_cast<float>(mouse->lastMousePos.x - x);
+		mouse->dy = 0.75f*static_cast<float>(y - mouse->lastMousePos.y);
+
+		camera->IncPosition(mouse->dx, mouse->dy, 0);
 	}
 
 	mouse->lastMousePos.x = x;

@@ -26,5 +26,6 @@
 #include "Camera.h"
 #include "Mouse.h"
 #include "Geometrias.h"
+#include "MathHead.h"
 
 #endif

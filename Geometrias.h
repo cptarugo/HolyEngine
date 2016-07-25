@@ -4,11 +4,15 @@
 #pragma once
 
 #include "Model.h"
+#include "MathHead.h"
 
 class Geometrias
 {
 public:
 
+	//
+	//	Sem uso POR ENQUANTO
+	//
 	struct Vertex
 	{
 		Vertex() {}
@@ -29,9 +33,21 @@ public:
 	};
 
 	void CriarGrid(float width, float depth, UINT m, UINT n, Model &modelo);
+	void CriarCilindro(float raioBase, float raioTopo, float altura, UINT nCortes, UINT nStack, Model &modelo);
+	void Geosfera(float raio, UINT nSubdivisao, Model &modelo);
+	void Height(float width, float depth, UINT m, UINT n, Model &modelo);	//Height seria montanha na verdade. So n to afim de mudar o nome
 
+
+
+	//
+	//	Utils
+	//
+	void Subdividir(Model &modelo);
+
+
+	void BuildCilindroTopo(float raioBase, float raioTopo, float altura, UINT nCortes, UINT nStack, Model& modelo);
+	void BuildCilindroBase(float raioBase, float raioTopo, float altura, UINT nCortes, UINT nStack, Model& modelo);
 	float GetHeight(float x, float z);
-	void Height(float width, float depth, UINT m, UINT n, Model &modelo);
 };
 
 #endif

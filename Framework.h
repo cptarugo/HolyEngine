@@ -31,7 +31,7 @@ private:
 	//	Testes
 	//
 	Shader *shaderModelo;
-	Model *modelo;
+	Model *modelo, *modelo2;
 	Camera *camera;
 	Mouse *mouse;
 	XMFLOAT4X4 mView, mProj, mWorld;
