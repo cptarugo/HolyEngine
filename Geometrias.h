@@ -48,6 +48,7 @@ public:
 	void BuildCilindroTopo(float raioBase, float raioTopo, float altura, UINT nCortes, UINT nStack, Model& modelo);
 	void BuildCilindroBase(float raioBase, float raioTopo, float altura, UINT nCortes, UINT nStack, Model& modelo);
 	float GetHeight(float x, float z);
+	XMFLOAT3 GetHillNormal(float x, float z);
 };
 
 #endif

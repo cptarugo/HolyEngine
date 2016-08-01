@@ -6,15 +6,26 @@
 #include <d3dx11.h>
 #include <xnamath.h>
 #include "Definicoes.h"
+#include "Luz.h"
 
+
+//cbPerObject
 struct constantBufferShader {
 	XMFLOAT4X4 worldViewProj;
+	XMFLOAT4X4 gWorld;
+	XMFLOAT4X4 gWorldInvTranspose;
+	Material gMaterial;
 };
 
-struct cbPerObject {
-	XMMATRIX mWorld;
-	XMMATRIX mView;
-	XMMATRIX mProj;
+
+
+///__declspec(align(16))		///Deixando a struct alinhada com 16 bytes (senao o CreateBuffer ira falhar por causa do tamanho da struct nao ser multiplo de 16)
+struct cbPerFrame {
+	LuzDirecionada gLuzDir;
+	PontoLuz gLuzPt;
+	LuzFocada gLuzFoco;
+	XMFLOAT3 gPosOlhoW;
+	float pad;
 };
 
 class Shader
@@ -25,7 +36,8 @@ public:
 
 	bool Iniciar(WCHAR *shader_hlsl_name, ID3D11Device *device);
 
-	void Ativar(ID3D11DeviceContext *conDevice, constantBufferShader *gWorldViewProj);
+	void AtivarPerObject(ID3D11DeviceContext *conDevice, constantBufferShader *gWorldViewProj);
+	void AtivarPerFrame(ID3D11DeviceContext *conDevice, cbPerFrame *gPerFrame);
 
 	void Render(ID3D11DeviceContext *conDevice, UINT indicesCount);
 
@@ -41,6 +53,7 @@ private:
 
 	//CONSTANT BUFFER PARA OS SHADERS
 	ID3D11Buffer *cbWorldViewProj;
+	ID3D11Buffer *cbPerFrameBuff;
 
 
 	bool StartShader(WCHAR *shader_hlsl_name, ID3D11Device *device);

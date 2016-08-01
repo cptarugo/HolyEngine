@@ -10,6 +10,7 @@ Camera::Camera(Mouse *_mouse) : posX(0.0f), posY(15.0f), posZ(15.0f), angulo(0.0
 	XMVECTOR pos = XMVectorSet(0.0f, 15.0f, 15.0f, 1.0f);
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
+
 	cameraViewMatrix = XMMatrixLookAtLH(pos, XMVectorZero(), up);
 }
 
@@ -33,6 +34,7 @@ void Camera::Update(float deltaTime)
 	XMVECTOR target = XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
+	XMStoreFloat3(&gEyeW, XMVector3Normalize(target - pos));
 	cameraViewMatrix = XMMatrixLookAtLH(pos, target, up) * XMMatrixTranslation(posX, posY, posZ);
 }
 
@@ -69,6 +71,16 @@ void Camera::RotacionarEsq()
 	rotY += rotVelocity;
 	if (rotY > 360.0f)
 		rotY -= 360.0f;
+}
+
+XMFLOAT3 Camera::ReturnPosicao()
+{
+	return XMFLOAT3(posX, posY, posZ);
+}
+
+XMFLOAT3 Camera::ReturnGEyeW()
+{
+	return gEyeW;
 }
 
 

@@ -21,6 +21,8 @@ public:
 	void MoverFrente(bool keyDown);
 	void RotacionarEsq();
 
+	XMFLOAT3 ReturnPosicao();
+	XMFLOAT3 ReturnGEyeW();
 	XMMATRIX GetCameraView();
 
 	float raio;
@@ -32,6 +34,7 @@ private:
 	float frameRate;
 
 	XMMATRIX cameraViewMatrix;
+	XMFLOAT3 gEyeW;
 
 	Mouse *mouse;
 };

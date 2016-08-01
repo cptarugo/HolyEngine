@@ -8,6 +8,7 @@ Shader::Shader()
 	pShader = NULL;
 	inputLayout = NULL;
 	cbWorldViewProj = NULL;
+	cbPerFrameBuff = NULL;
 }
 
 
@@ -17,6 +18,7 @@ Shader::~Shader()
 	ReleaseCOM(pShader);
 	ReleaseCOM(inputLayout);
 	ReleaseCOM(cbWorldViewProj);
+	ReleaseCOM(cbPerFrameBuff);
 }
 
 bool Shader::Iniciar(WCHAR *shader_hlsl_name, ID3D11Device *device)
@@ -31,7 +33,7 @@ bool Shader::Iniciar(WCHAR *shader_hlsl_name, ID3D11Device *device)
 }
 
 
-void Shader::Ativar(ID3D11DeviceContext *conDevice, constantBufferShader *gWorldViewProj)
+void Shader::AtivarPerObject(ID3D11DeviceContext *conDevice, constantBufferShader *gWorldViewProj)
 {
 	///conDevice->UpdateSubresource(cbWorldViewProj, 0, 0, gWorldViewProj, 0, 0);
 	D3D11_MAPPED_SUBRESOURCE ms;
@@ -47,9 +49,31 @@ void Shader::Ativar(ID3D11DeviceContext *conDevice, constantBufferShader *gWorld
 	conDevice->Unmap(cbWorldViewProj, 0);
 
 	conDevice->VSSetConstantBuffers(0, 1, &cbWorldViewProj);
-
-
+	conDevice->PSSetConstantBuffers(0, 1, &cbWorldViewProj);
 }
+
+
+
+//
+//	O por frame eh so utilizado no pixel shader, por isso PSSetConstantBuffers
+//
+void Shader::AtivarPerFrame(ID3D11DeviceContext * conDevice, cbPerFrame * gPerFrame)
+{
+	/*
+	D3D11_MAPPED_SUBRESOURCE ms;
+	ZeroMemory(&ms, sizeof(ms));
+
+	conDevice->Map(cbPerFrameBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+	memcpy(ms.pData, &gPerFrame, sizeof(gPerFrame));
+	conDevice->Unmap(cbPerFrameBuff, 0);
+	*/
+
+	conDevice->UpdateSubresource(cbPerFrameBuff, 0, 0, gPerFrame, 0, 0);
+	conDevice->PSSetConstantBuffers(1, 1, &cbPerFrameBuff);
+}
+
+
+
 
 void Shader::Render(ID3D11DeviceContext * conDevice, UINT indicesCount)
 {
@@ -89,7 +113,7 @@ bool Shader::StartShader(WCHAR *shader_hlsl_name, ID3D11Device * device)
 	ID3D10Blob *pixelCompiled;
 	ID3D10Blob *pixelErrorMsg;
 
-	hr = D3DX11CompileFromFile(shader_hlsl_name, 0, 0, "PS", "ps_4_0", 0, 0, 0, &pixelCompiled, &pixelErrorMsg, 0);
+	hr = D3DX11CompileFromFile(L"Pixel.hlsl", 0, 0, "PS", "ps_4_0", 0, 0, 0, &pixelCompiled, &pixelErrorMsg, 0);
 	if (FAILED(hr)) {
 		if (pixelErrorMsg != 0) {
 			MessageBox(0, (LPCWSTR)pixelErrorMsg->GetBufferPointer(), 0, 0);
@@ -127,9 +151,8 @@ bool Shader::StartShader(WCHAR *shader_hlsl_name, ID3D11Device * device)
 	D3D11_INPUT_ELEMENT_DESC vertexDesc[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+		{ "NORMAL",	  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 	};
-
 
 	hr = device->CreateInputLayout(vertexDesc, 2, vertexCompiled->GetBufferPointer(), vertexCompiled->GetBufferSize(), &inputLayout);
 	if (FAILED(hr)) {
@@ -145,6 +168,10 @@ bool Shader::StartShader(WCHAR *shader_hlsl_name, ID3D11Device * device)
 
 bool Shader::CriarConstantBuffer(ID3D11Device * device)
 {
+
+	//
+	//	Per Object
+	//
 	D3D11_BUFFER_DESC cbBD;
 	ZeroMemory(&cbBD, sizeof(cbBD));
 	cbBD.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -162,7 +189,41 @@ bool Shader::CriarConstantBuffer(ID3D11Device * device)
 
 	HRESULT hr = device->CreateBuffer(&cbBD, &constantBufferInit, &cbWorldViewProj);
 	if (FAILED(hr)) {
-		MessageBox(0, L"CreateBuffer (Constant) falhou.", 0, 0);
+		MessageBox(0, L"CreateBuffer (cbPerObject) falhou.", 0, 0);
+		return false;
+	}
+
+
+
+	
+	//
+	//	Per Frame
+	//
+	D3D11_BUFFER_DESC cbPF;
+	ZeroMemory(&cbPF, sizeof(cbPF));
+	cbPF.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	cbPF.ByteWidth = sizeof(cbPerFrame);
+	cbPF.Usage = D3D11_USAGE_DEFAULT; //Acho q seria dynamic
+	cbPF.CPUAccessFlags = 0;///D3D11_CPU_ACCESS_WRITE;
+	cbPF.MiscFlags = 0;
+	cbPF.StructureByteStride = 0;
+
+	
+	
+	D3D11_SUBRESOURCE_DATA cbPerFrameInit;
+	ZeroMemory(&cbPerFrameInit, sizeof(cbPerFrameInit));
+	
+	cbPerFrame cb;
+	cb.gLuzDir = LuzDirecionada();
+	cb.gLuzFoco = LuzFocada();
+	cb.gLuzPt = PontoLuz();
+	cb.gPosOlhoW = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+	cbPerFrameInit.pSysMem = &cb;
+
+	hr = device->CreateBuffer(&cbPF, &cbPerFrameInit, &cbPerFrameBuff);
+	if (FAILED(hr)) {
+		MessageBox(0, L"CreateBuffer (cbPerFrame) falhou.", 0, 0);
 		return false;
 	}
 
