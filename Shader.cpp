@@ -37,20 +37,9 @@ bool Shader::Iniciar(WCHAR *shader_hlsl_name, ID3D11Device *device)
 
 void Shader::AtivarPerObject(ID3D11DeviceContext *conDevice, constantBufferShader *gWorldViewProj)
 {
-	///conDevice->UpdateSubresource(cbWorldViewProj, 0, 0, gWorldViewProj, 0, 0);
-	D3D11_MAPPED_SUBRESOURCE ms;
-	ZeroMemory(&ms, sizeof(ms));
-
-
 	//Transposing a matriz
 	XMMATRIX worldVProjTransposed = XMLoadFloat4x4(&gWorldViewProj->worldViewProj);
 	XMStoreFloat4x4(&gWorldViewProj->worldViewProj, XMMatrixTranspose(worldVProjTransposed));
-
-	/*
-	conDevice->Map(cbWorldViewProj, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-	memcpy(ms.pData, gWorldViewProj, sizeof(gWorldViewProj));
-	conDevice->Unmap(cbWorldViewProj, 0);
-	*/
 
 	conDevice->UpdateSubresource(cbWorldViewProj, 0, 0, gWorldViewProj, 0, 0);
 	if (!ativouPerObject) {
@@ -67,15 +56,6 @@ void Shader::AtivarPerObject(ID3D11DeviceContext *conDevice, constantBufferShade
 //
 void Shader::AtivarPerFrame(ID3D11DeviceContext * conDevice, cbPerFrame *gPerFrame)
 {
-	/*
-	D3D11_MAPPED_SUBRESOURCE ms;
-	ZeroMemory(&ms, sizeof(ms));
-
-	conDevice->Map(cbPerFrameBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-	memcpy(ms.pData, gPerFrame, sizeof(gPerFrame));
-	conDevice->Unmap(cbPerFrameBuff, 0);
-	*/
-
 	conDevice->UpdateSubresource(cbPerFrameBuff, 0, 0, gPerFrame, 0, 0);
 	if (!ativouPerFrame) {
 		conDevice->PSSetConstantBuffers(1, 1, &cbPerFrameBuff);

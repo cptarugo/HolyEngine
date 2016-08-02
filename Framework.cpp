@@ -140,7 +140,7 @@ bool Framework::Iniciar() {
 	Geometrias geoGen;
 	geoGen.Height(320.0f, 320.0f, 100, 100, *modelo);
 	modelo->Build(md3dDevice);
-	modelo2->OpenBookTXT("skull.txt", md3dDevice);
+	modelo2->OpenBookTXT("car.txt", md3dDevice);
 
 	currRaster = solidRasterizer;
 

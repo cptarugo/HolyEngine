@@ -24,18 +24,19 @@ void Camera::Update(float deltaTime)
 {
 	frameRate = deltaTime;
 
-	
+	XMStoreFloat3(&gEyeW, XMVectorSet(cameraViewMatrix._13, cameraViewMatrix._23, cameraViewMatrix._33, 0.0f));
 	float x = raio*sinf(mPhi)*cosf(mTheta);
 	float z = raio*sinf(mPhi)*sinf(mTheta);
 	float y = raio*cosf(mPhi);
 
 	// Build the view matrix.
 	XMVECTOR pos = XMVectorSet(x, y, z, 1.0f);
-	XMVECTOR target = XMVectorZero();
+	XMVECTOR target = XMVectorSet(cameraViewMatrix._13, cameraViewMatrix._23, cameraViewMatrix._33, 0.0f);///XMVectorZero();
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-	XMStoreFloat3(&gEyeW, XMVector3Normalize(target - pos));
+	
 	cameraViewMatrix = XMMatrixLookAtLH(pos, target, up) * XMMatrixTranslation(posX, posY, posZ);
+	
 }
 
 
