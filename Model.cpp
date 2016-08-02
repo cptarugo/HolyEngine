@@ -41,8 +41,8 @@ void Model::OpenTXT(char * file_name, ID3D11Device* device)
 	vertices.resize(nModelVert);
 	for (int i = 0; i < nModelVert; ++i) {
 		fin >> vertices[i].Pos.x >> vertices[i].Pos.y >> vertices[i].Pos.z;
-		fin >> vertices[i].Cor.x >> vertices[i].Cor.y >> vertices[i].Cor.z;
-		vertices[i].Cor.w = 1.0f;
+		fin >> vertices[i].Normal.x >> vertices[i].Normal.y >> vertices[i].Normal.z;
+		//vertices[i].Cor.w = 1.0f;
 	}
 
 
@@ -62,6 +62,52 @@ void Model::OpenTXT(char * file_name, ID3D11Device* device)
 	Build(device);
 }
 
+
+
+
+
+void Model::OpenBookTXT(char * file_name, ID3D11Device * device)
+{
+
+	std::fstream fin(file_name);
+
+	if (!fin) {
+		MessageBox(0, L"Erro ao carregar o arquivo de modelo (Arquivo nao existe ou esta corrompido).", L"Model Error", 0);
+		return;
+	}
+
+	std::string ignore;
+	fin >> ignore >> nModelVert;
+	fin >> ignore >> nModelIndex;
+	fin >> ignore >> ignore >> ignore >> ignore;
+
+
+	vertices.resize(nModelVert);
+	for (int i = 0; i < nModelVert; ++i) {
+		fin >> vertices[i].Pos.x >> vertices[i].Pos.y >> vertices[i].Pos.z;
+
+		//Seria a normal no lugar da cor aqui
+		fin >> vertices[i].Normal.x >> vertices[i].Normal.y >> vertices[i].Normal.z;
+	}
+
+
+	fin >> ignore >> ignore >> ignore;
+
+
+	UINT mTriangleCount = nModelIndex;
+	nModelIndex *= 3;
+	indices.resize(nModelIndex);
+	for (int i = 0; i < mTriangleCount; ++i) {
+		fin >> indices[i * 3 + 0] >> indices[i * 3 + 1] >> indices[i * 3 + 2];
+	}
+
+	fin.close();
+
+
+
+
+	Build(device);
+}
 
 
 
@@ -123,7 +169,7 @@ void Model::Build(ID3D11Device * device)
 
 
 
-
+/*
 void Model::LoadCube(ID3D11Device * device)
 {
 	Vertice vertices[] =
@@ -227,7 +273,7 @@ void Model::LoadCube(ID3D11Device * device)
 	if (FAILED(hr))
 		return;
 }
-
+*/
 
 
 void Model::Render(ID3D11DeviceContext *conDevice, ID3D11RasterizerState *rasterizerState)
@@ -256,6 +302,24 @@ void Model::SetWorldMatrix(const XMMATRIX& newWorld)
 XMMATRIX Model::GetWorldMatrix()
 {
 	return worldMatrix;
+}
+
+void Model::SetMaterial(XMFLOAT4 Ambiente, XMFLOAT4 Difuso, XMFLOAT4 Especular, XMFLOAT4 Refletivo)
+{
+	material.Ambiente = Ambiente;
+	material.Difuso = Difuso;
+	material.Especular = Especular;
+	material.Refletivo = Refletivo;
+}
+
+void Model::SetMaterial(Material newMat)
+{
+	material = newMat;
+}
+
+Material Model::GetMaterial()
+{
+	return material;
 }
 
 

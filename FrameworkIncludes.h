@@ -27,5 +27,6 @@
 #include "Mouse.h"
 #include "Geometrias.h"
 #include "MathHead.h"
+#include "Luz.h"
 
 #endif

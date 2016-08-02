@@ -7,7 +7,8 @@
 
 typedef struct Vertice {
 	XMFLOAT3 Pos;
-	XMFLOAT4 Cor;
+	XMFLOAT3 Normal;
+	///XMFLOAT4 Cor;
 }Vertice;
 
 #endif

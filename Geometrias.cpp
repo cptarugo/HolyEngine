@@ -99,7 +99,7 @@ void Geometrias::CriarCilindro(float raioBase, float raioTopo, float altura, UIN
 			float s = sinf(j*dTheta);
 
 			vertex.Pos = XMFLOAT3(r*c, y, r*s);
-			vertex.Cor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+			///vertex.Cor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
 			modelo.vertices.push_back(vertex);
 
@@ -147,7 +147,8 @@ void Geometrias::Geosfera(float raio, UINT nSubdivisoes, Model & modelo)
 
 	//????
 	const float X = 0.525731f;
-	const float Z = 0.850651f;
+	const float Z = 0.850651f;
+
 
 	//Fazendo um icosaedro
 	XMFLOAT3 pos[12] = {
@@ -203,7 +204,7 @@ void Geometrias::Geosfera(float raio, UINT nSubdivisoes, Model & modelo)
 		float b = 1.0f;//static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 
 		XMStoreFloat3(&modelo.vertices[i].Pos, p);
-		XMStoreFloat4(&modelo.vertices[i].Cor, XMVectorSet(r, g, b, 1.0f));
+		///XMStoreFloat4(&modelo.vertices[i].Cor, XMVectorSet(r, g, b, 1.0f));
 		//Setar a normal tbm
 
 		//E lidar com a textura aqui
@@ -231,8 +232,9 @@ void Geometrias::Height(float width, float depth, UINT m, UINT n, Model & modelo
 		p.y = GetHeight(p.x, p.z);
 
 		vertices[i].Pos = p;
-
-
+		vertices[i].Normal = GetHillNormal(p.x, p.z);
+		
+		/*
 		if (p.y < -10.0f) 
 			vertices[i].Cor = XMFLOAT4(1.0f, 0.96f, 0.62f, 1.0f);
 		else if (p.y < 5.0f)
@@ -243,6 +245,7 @@ void Geometrias::Height(float width, float depth, UINT m, UINT n, Model & modelo
 			vertices[i].Cor = XMFLOAT4(0.45f, 0.39f, 0.34f, 1.0f);
 		else
 			vertices[i].Cor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		*/
 	}
 
 	modelo.vertices = vertices;
@@ -343,7 +346,7 @@ void Geometrias::BuildCilindroTopo(float raioBase, float raioTopo, float altura,
 	float dTheta = 2.0f*XM_PI / nCortes;
 
 	Vertice vertex;
-	vertex.Cor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	///vertex.Cor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	for (UINT i = 0; i <= nCortes; ++i)
 	{
 		float x = raioTopo*cosf(i*dTheta);
@@ -388,7 +391,7 @@ void Geometrias::BuildCilindroBase(float raioBase, float raioTopo, float altura,
 	float dTheta = 2.0f*XM_PI / nCortes;
 
 	Vertice vertex;
-	vertex.Cor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	///vertex.Cor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	for (UINT i = 0; i <= nCortes; ++i)
 	{
 		float x = raioBase*cosf(i*dTheta);
@@ -401,7 +404,7 @@ void Geometrias::BuildCilindroBase(float raioBase, float raioTopo, float altura,
 		vertex.Pos = XMFLOAT3(x, y, z);
 		modelo.vertices.push_back(vertex);
 		///Vertice(x, y, z,
-		///0.0f, 1.0f, 0.0f,	///Normal
+		///0.0f, -1.0f, 0.0f,	///Normal
 		///1.0f, 0.0f, 0.0f,	///T
 		///u, v));				///UV
 	}
@@ -428,4 +431,18 @@ void Geometrias::BuildCilindroBase(float raioBase, float raioTopo, float altura,
 
 float Geometrias::GetHeight(float x, float z) {
 	return 0.3f*(z*sinf(0.1f*x) + x*cosf(0.1f*z));
+}
+
+XMFLOAT3 Geometrias::GetHillNormal(float x, float z)
+{
+	// n = (-df/dx, 1, -df/dz)
+	XMFLOAT3 n(
+		-0.03f*z*cosf(0.1f*x) - 0.3f*cosf(0.1f*z),
+		1.0f,
+		-0.3f*sinf(0.1f*x) + 0.03f*x*sinf(0.1f*z));
+
+	XMVECTOR unitNormal = XMVector3Normalize(XMLoadFloat3(&n));
+	XMStoreFloat3(&n, unitNormal);
+
+	return n;
 }

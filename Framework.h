@@ -4,7 +4,6 @@
 
 #include "FrameworkIncludes.h"
 
-
 class Framework
 {
 public:
@@ -34,8 +33,19 @@ private:
 	Model *modelo, *modelo2;
 	Camera *camera;
 	Mouse *mouse;
+	int currRasterIndex;
+	ID3D11RasterizerState* currRaster;
 	XMFLOAT4X4 mView, mProj, mWorld;
 	constantBufferShader *cgWorldViewProj;
+	cbPerFrame cbPerFrameConst;
+
+	//
+	//	Iluminacao
+	//
+	LuzDirecionada dirLight;
+	PontoLuz pointLight;
+	LuzFocada spotLight;
+
 
 	//
 	//	Fundamentais para DirectX

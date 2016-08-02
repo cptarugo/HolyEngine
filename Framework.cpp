@@ -15,7 +15,8 @@ Framework::Framework(void)
 	mDepthStencilBuffer(0),
 	mRenderTargetView(0),
 	mDepthStencilView(0),
-	angulo(0.0f)
+	angulo(0.0f),
+	currRasterIndex(0)
 {
 
 	ZeroMemory(&mScreenViewport, sizeof(D3D11_VIEWPORT));
@@ -41,7 +42,7 @@ Framework::Framework(void)
 	modelo->SetWorldMatrix(I);
 	XMStoreFloat4x4(&mWorld, I);
 
-	modelo2->SetWorldMatrix(XMMatrixTranslation(0.0f, 2.0f, 0.0f) * XMMatrixScaling(10.0f, 10.0f, 10.0f));
+	modelo2->SetWorldMatrix(XMMatrixTranslation(0.0f, 2.0f, 0.0f));
 	
 	XMStoreFloat4x4(&mProj, XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)JANELA_WIDTH / (float)JANELA_HEIGHT, 0.1f, 1000.0f));
 
@@ -68,6 +69,7 @@ Framework::~Framework(void)
 	ReleaseCOM(md3dImmediateContext);
 	ReleaseCOM(md3dDevice);
 	
+	ReleaseCOM(currRaster);
 	ReleaseCOM(solidRasterizer);
 	ReleaseCOM(wireframeRasterizer);
 
@@ -97,15 +99,52 @@ bool Framework::Iniciar() {
 	if (!CriarRasterizers())
 		return false;
 
+
+	//
+	//	Criando as luzes
+	//
+	// Directional light.
+	dirLight.Ambiente = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
+	dirLight.Difuso = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	dirLight.Especular = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	dirLight.Direcao = XMFLOAT3(0.57735f, -0.57735f, 0.57735f);
+	// Point light--position is changed every frame to animate
+	// in UpdateScene function.
+	pointLight.Ambiente = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	pointLight.Difuso = XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f);
+	pointLight.Especular = XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f);
+	pointLight.Att = XMFLOAT3(0.0f, 0.1f, 0.0f);
+	pointLight.Alcance = 25.0f;
+	pointLight.Posicao.y = 5.0f;
+	// Spot light--position and direction changed every frame to
+	// animate in UpdateScene function.
+	spotLight.Ambiente = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	spotLight.Difuso = XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f);
+	spotLight.Especular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	spotLight.Att = XMFLOAT3(1.0f, 0.0f, 0.0f);
+	spotLight.Spot = 96.0f;
+	spotLight.Alcance = 10000.0f;
+
+	Material mLandMat;
+	mLandMat.Ambiente = XMFLOAT4(0.48f, 0.77f, 0.46f, 1.0f);
+	mLandMat.Difuso = XMFLOAT4(0.48f, 0.77f, 0.46f, 1.0f);
+	mLandMat.Especular = XMFLOAT4(0.2f, 0.2f, 0.2f, 16.0f);
+	modelo->SetMaterial(mLandMat);
+
+	Material mSkullMat;
+	mSkullMat.Ambiente = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	mSkullMat.Difuso = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	mSkullMat.Especular = XMFLOAT4(0.8f, 0.8f, 0.8f, 16.0f);
+	modelo2->SetMaterial(mSkullMat);
+
 	Geometrias geoGen;
 	geoGen.Height(320.0f, 320.0f, 100, 100, *modelo);
 	modelo->Build(md3dDevice);
-	///modelo->OpenTXT("Box.txt", md3dDevice);
-	///modelo2->LoadCube(md3dDevice);
-	geoGen.Geosfera(0.5f, 2, *modelo2);
-	modelo2->Build(md3dDevice);
+	modelo2->OpenBookTXT("car.txt", md3dDevice);
 
-	if (!shaderModelo->Iniciar(L"color.hlsl", md3dDevice))
+	currRaster = solidRasterizer;
+
+	if (!shaderModelo->Iniciar(L"Vertex.hlsl", md3dDevice))
 		return false;
 
 	
@@ -160,9 +199,32 @@ void Framework::Executar()
 //
 void Framework::Update(float deltaTime)
 {
-
 	camera->Update(deltaTime);
-	modelo2->Update(deltaTime);
+
+	if (input->TeclaPressionada(VK_F1)) {
+		if (currRasterIndex == 0) {
+			currRasterIndex = 1;
+			currRaster = wireframeRasterizer;
+		}
+		else {
+			currRasterIndex = 0;
+			currRaster = solidRasterizer;
+		}
+	}
+
+
+
+	//
+	//	Atualizando a posicao da "lanterna"
+	//
+	// Circle light over the land surface.
+	pointLight.Posicao.x = 70.0f*cosf(0.2f*gameTimer.TotalTime());
+	pointLight.Posicao.z = 70.0f*sinf(0.2f*gameTimer.TotalTime());
+
+	dirLight.Direcao = camera->ReturnGEyeW();
+
+	spotLight.Posicao = camera->ReturnPosicao();
+	spotLight.Direcao = camera->ReturnGEyeW();
 }
 
 
@@ -175,6 +237,17 @@ void Framework::Render()
 	ComecoCena();
 
 
+	//
+	//	Inicializando o buffer per frame
+	//
+	cbPerFrameConst.gLuzDir = dirLight;
+	cbPerFrameConst.gLuzFoco = spotLight;
+	cbPerFrameConst.gLuzPt = pointLight;
+	cbPerFrameConst.gPosOlhoW = camera->ReturnPosicao();
+	cbPerFrameConst.pad = 0;
+
+	shaderModelo->AtivarPerFrame(md3dImmediateContext, &cbPerFrameConst);
+
 	////MODELO 1
 	XMMATRIX world = modelo->GetWorldMatrix();//XMLoadFloat4x4(&mWorld);
 	XMMATRIX view = camera->GetCameraView();
@@ -184,24 +257,30 @@ void Framework::Render()
 	XMStoreFloat4x4(&gWorldViewProj, WorldViewProj);
 	
 	cgWorldViewProj->worldViewProj = gWorldViewProj;
+	cgWorldViewProj->gMaterial = modelo->GetMaterial();																///
+	XMStoreFloat4x4(&cgWorldViewProj->gWorld,modelo->GetWorldMatrix());												///
+	XMStoreFloat4x4(&cgWorldViewProj->gWorldInvTranspose, MathHead::InverseTranspose(modelo->GetWorldMatrix()));	///
 
-	modelo->Render(md3dImmediateContext, solidRasterizer);
-	shaderModelo->Ativar(md3dImmediateContext, cgWorldViewProj);
+	modelo->Render(md3dImmediateContext, /*solidRasterizer*/currRaster);
+	shaderModelo->AtivarPerObject(md3dImmediateContext, cgWorldViewProj);
 	shaderModelo->Render(md3dImmediateContext, modelo->nModelIndex);
 	////MODELO 1
 
-	////MODELO 1
+	////MODELO 2
 	world = modelo2->GetWorldMatrix();//XMLoadFloat4x4(&mWorld);
 	view = camera->GetCameraView();
 	WorldViewProj = world * view * proj;
 	XMStoreFloat4x4(&gWorldViewProj, WorldViewProj);
 
 	cgWorldViewProj->worldViewProj = gWorldViewProj;
+	cgWorldViewProj->gMaterial = modelo2->GetMaterial();															///
+	XMStoreFloat4x4(&cgWorldViewProj->gWorld, modelo2->GetWorldMatrix());											///
+	XMStoreFloat4x4(&cgWorldViewProj->gWorldInvTranspose, MathHead::InverseTranspose(modelo2->GetWorldMatrix()));	///
 
-	modelo2->Render(md3dImmediateContext, wireframeRasterizer);
-	shaderModelo->Ativar(md3dImmediateContext, cgWorldViewProj);
+	modelo2->Render(md3dImmediateContext, /*solidRasterizer*/currRaster);
+	shaderModelo->AtivarPerObject(md3dImmediateContext, cgWorldViewProj);
 	shaderModelo->Render(md3dImmediateContext, modelo2->nModelIndex);
-	////MODELO 1
+	////MODELO 2
 
 
 	TrocarBuffer();
@@ -585,7 +664,7 @@ void Framework::ComecoCena() {
 	cor[2] = 0.4f;
 	cor[3] = 1.0f;
 
-	md3dImmediateContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_DEPTH /*| D3D11_CLEAR_STENCIL*/, 1.0f, 0);
+	md3dImmediateContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	md3dImmediateContext->ClearRenderTargetView(mRenderTargetView, cor);
 }
 
