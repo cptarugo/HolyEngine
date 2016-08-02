@@ -78,6 +78,7 @@ XMFLOAT3 Camera::ReturnPosicao()
 	return XMFLOAT3(posX, posY, posZ);
 }
 
+//Retorna a direcao da camera (onde esta olhando)
 XMFLOAT3 Camera::ReturnGEyeW()
 {
 	return gEyeW;

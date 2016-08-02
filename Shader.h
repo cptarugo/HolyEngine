@@ -59,6 +59,8 @@ private:
 	bool StartShader(WCHAR *shader_hlsl_name, ID3D11Device *device);
 
 	bool CriarConstantBuffer(ID3D11Device *device);
+
+	bool ativouPerObject, ativouPerFrame;
 };
 
 #endif

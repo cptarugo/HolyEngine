@@ -9,6 +9,8 @@ Shader::Shader()
 	inputLayout = NULL;
 	cbWorldViewProj = NULL;
 	cbPerFrameBuff = NULL;
+	ativouPerObject = false;
+	ativouPerFrame = false;
 }
 
 
@@ -44,12 +46,18 @@ void Shader::AtivarPerObject(ID3D11DeviceContext *conDevice, constantBufferShade
 	XMMATRIX worldVProjTransposed = XMLoadFloat4x4(&gWorldViewProj->worldViewProj);
 	XMStoreFloat4x4(&gWorldViewProj->worldViewProj, XMMatrixTranspose(worldVProjTransposed));
 
+	/*
 	conDevice->Map(cbWorldViewProj, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-	memcpy(ms.pData, &gWorldViewProj->worldViewProj, sizeof(gWorldViewProj->worldViewProj));
+	memcpy(ms.pData, gWorldViewProj, sizeof(gWorldViewProj));
 	conDevice->Unmap(cbWorldViewProj, 0);
+	*/
 
-	conDevice->VSSetConstantBuffers(0, 1, &cbWorldViewProj);
-	conDevice->PSSetConstantBuffers(0, 1, &cbWorldViewProj);
+	conDevice->UpdateSubresource(cbWorldViewProj, 0, 0, gWorldViewProj, 0, 0);
+	if (!ativouPerObject) {
+		conDevice->VSSetConstantBuffers(0, 1, &cbWorldViewProj);
+		conDevice->PSSetConstantBuffers(0, 1, &cbWorldViewProj);
+		ativouPerObject = true;
+	}
 }
 
 
@@ -57,19 +65,22 @@ void Shader::AtivarPerObject(ID3D11DeviceContext *conDevice, constantBufferShade
 //
 //	O por frame eh so utilizado no pixel shader, por isso PSSetConstantBuffers
 //
-void Shader::AtivarPerFrame(ID3D11DeviceContext * conDevice, cbPerFrame * gPerFrame)
+void Shader::AtivarPerFrame(ID3D11DeviceContext * conDevice, cbPerFrame *gPerFrame)
 {
 	/*
 	D3D11_MAPPED_SUBRESOURCE ms;
 	ZeroMemory(&ms, sizeof(ms));
 
 	conDevice->Map(cbPerFrameBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
-	memcpy(ms.pData, &gPerFrame, sizeof(gPerFrame));
+	memcpy(ms.pData, gPerFrame, sizeof(gPerFrame));
 	conDevice->Unmap(cbPerFrameBuff, 0);
 	*/
 
 	conDevice->UpdateSubresource(cbPerFrameBuff, 0, 0, gPerFrame, 0, 0);
-	conDevice->PSSetConstantBuffers(1, 1, &cbPerFrameBuff);
+	if (!ativouPerFrame) {
+		conDevice->PSSetConstantBuffers(1, 1, &cbPerFrameBuff);
+		ativouPerFrame = true;
+	}
 }
 
 
@@ -82,7 +93,6 @@ void Shader::Render(ID3D11DeviceContext * conDevice, UINT indicesCount)
 	conDevice->PSSetShader(pShader, 0, 0);
 
 	conDevice->DrawIndexed(indicesCount, 0, 0);
-	///conDevice->Draw(3, 0);
 }
 
 
@@ -176,8 +186,8 @@ bool Shader::CriarConstantBuffer(ID3D11Device * device)
 	ZeroMemory(&cbBD, sizeof(cbBD));
 	cbBD.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	cbBD.ByteWidth = sizeof(constantBufferShader);
-	cbBD.Usage = D3D11_USAGE_DYNAMIC; //Acho q seria dynamic
-	cbBD.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	cbBD.Usage = D3D11_USAGE_DEFAULT; //Acho q seria dynamic
+	cbBD.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
 	cbBD.MiscFlags = 0;
 	cbBD.StructureByteStride = 0;
 	
@@ -204,7 +214,7 @@ bool Shader::CriarConstantBuffer(ID3D11Device * device)
 	cbPF.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	cbPF.ByteWidth = sizeof(cbPerFrame);
 	cbPF.Usage = D3D11_USAGE_DEFAULT; //Acho q seria dynamic
-	cbPF.CPUAccessFlags = 0;///D3D11_CPU_ACCESS_WRITE;
+	cbPF.CPUAccessFlags = 0;//D3D11_CPU_ACCESS_WRITE;
 	cbPF.MiscFlags = 0;
 	cbPF.StructureByteStride = 0;
 

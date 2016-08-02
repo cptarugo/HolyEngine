@@ -130,12 +130,17 @@ bool Framework::Iniciar() {
 	mLandMat.Difuso = XMFLOAT4(0.48f, 0.77f, 0.46f, 1.0f);
 	mLandMat.Especular = XMFLOAT4(0.2f, 0.2f, 0.2f, 16.0f);
 	modelo->SetMaterial(mLandMat);
-	modelo2->SetMaterial(mLandMat);
+
+	Material mSkullMat;
+	mSkullMat.Ambiente = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	mSkullMat.Difuso = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+	mSkullMat.Especular = XMFLOAT4(0.8f, 0.8f, 0.8f, 16.0f);
+	modelo2->SetMaterial(mSkullMat);
 
 	Geometrias geoGen;
 	geoGen.Height(320.0f, 320.0f, 100, 100, *modelo);
 	modelo->Build(md3dDevice);
-	modelo2->OpenTXT("Box.txt", md3dDevice);
+	modelo2->OpenBookTXT("skull.txt", md3dDevice);
 
 	currRaster = solidRasterizer;
 
@@ -216,6 +221,10 @@ void Framework::Update(float deltaTime)
 	pointLight.Posicao.x = 70.0f*cosf(0.2f*gameTimer.TotalTime());
 	pointLight.Posicao.z = 70.0f*sinf(0.2f*gameTimer.TotalTime());
 
+	dirLight.Direcao = camera->ReturnGEyeW();
+
+	spotLight.Posicao = camera->ReturnPosicao();
+	spotLight.Direcao = camera->ReturnGEyeW();
 }
 
 
@@ -234,7 +243,7 @@ void Framework::Render()
 	cbPerFrameConst.gLuzDir = dirLight;
 	cbPerFrameConst.gLuzFoco = spotLight;
 	cbPerFrameConst.gLuzPt = pointLight;
-	cbPerFrameConst.gPosOlhoW = camera->ReturnGEyeW();
+	cbPerFrameConst.gPosOlhoW = camera->ReturnPosicao();
 	cbPerFrameConst.pad = 0;
 
 	shaderModelo->AtivarPerFrame(md3dImmediateContext, &cbPerFrameConst);
